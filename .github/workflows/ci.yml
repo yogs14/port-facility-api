@@ -1,23 +1,58 @@
-name: Pelindo API CI Pipeline
+name: Pelindo API Enterprise Pipeline
 
 on:
   push:
     branches: [ "main" ]
 
 jobs:
-  build-and-test:
+  # TAHAP 1: Pengujian & Keamanan
+  test-and-security:
     runs-on: ubuntu-latest
     steps:
-    - name: Tarik kode dari repository
+    - name: Tarik kode
       uses: actions/checkout@v4
 
-    - name: Siapkan lingkungan Go
+    - name: Siapkan Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.21' # Biarkan versi ini, GitHub akan mengunduh versi yang cocok
+        go-version: '1.21'
 
-    - name: Jalankan Unit Test (Pengecekan Logika)
+    - name: Jalankan Unit Test
       run: go test -v ./...
 
-    - name: Jalankan Build (Pengecekan Kompilasi)
-      run: go build -v ./...
+    - name: Pengecekan Keamanan Kode (gosec)
+      uses: securego/gosec@master
+      with:
+        args: ./...
+
+  # TAHAP 2: Pembuatan Docker Image (Akan berjalan JIKA Tahap 1 sukses)
+  build-and-push-docker:
+    needs: test-and-security # Ini kunci! Jangan buat Docker jika kode masih error/tidak aman
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write # Memberi izin GitHub Actions untuk menyimpan Docker Image
+      contents: read
+    
+    steps:
+    - name: Tarik kode
+      uses: actions/checkout@v4
+
+    - name: Login ke GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }} # Token rahasia ini otomatis disediakan oleh GitHub
+
+    - name: Ubah nama repository ke huruf kecil
+      id: lowercase-repo
+      run: |
+        REPO="${{ github.repository }}"
+        echo "REPO_LOWER=${REPO,,}" >> $GITHUB_ENV
+
+    - name: Build dan Push Docker Image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ghcr.io/${{ env.REPO_LOWER }}/port-api:latest
