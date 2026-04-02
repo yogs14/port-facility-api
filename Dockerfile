@@ -1,5 +1,5 @@
 # Tahap 1: Membangun aplikasi
-FROM golang:1.21-alpine AS builder
+FROM golang:alpine AS builder
 WORKDIR /app
 COPY . .
 # Kompilasi aplikasi menjadi sebuah file binary bernama 'port-api'
