@@ -1,0 +1,23 @@
+name: Pelindo API CI Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Tarik kode dari repository
+      uses: actions/checkout@v4
+
+    - name: Siapkan lingkungan Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21' # Biarkan versi ini, GitHub akan mengunduh versi yang cocok
+
+    - name: Jalankan Unit Test (Pengecekan Logika)
+      run: go test -v ./...
+
+    - name: Jalankan Build (Pengecekan Kompilasi)
+      run: go build -v ./...
